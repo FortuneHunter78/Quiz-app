@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  email          String   @unique
+  name           String?
+  password       String
+  role          String   @default("PARTICIPANT") // ORGANIZER or PARTICIPANT
+  createdQuizzes Quiz[]   @relation("CreatedQuizzes")
+  sessions       UserQuizSession[]
+  createdAt      DateTime @default(now())
+}
+
+model Quiz {
+  id        Int      @id @default(autoincrement())
+  title     String
+  code      String   @unique
+  category  String?  // Категория квиза
+  timeLimit Int      @default(15) // Время на ответ (в секундах)
+  rules     String?  // Правила проведения (например, "strict", "casual")
+  creatorId Int
+  creator   User     @relation("CreatedQuizzes", fields: [creatorId], references: [id])
+  questions Question[]
+  sessions  UserQuizSession[]
+  runs      QuizRun[]
+  createdAt DateTime @default(now())
+}
+
+model QuizRun {
+  id               Int               @id @default(autoincrement())
+  quizId           Int
+  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  startedAt        DateTime          @default(now())
+  finishedAt       DateTime?
+  participantCount Int               @default(0)
+  topScore         Int               @default(0)
+  winnerName       String?
+  sessions         UserQuizSession[]
+}
+
+model Question {
+  id         Int      @id @default(autoincrement())
+  text       String
+  imageUrl   String?
+  quizId     Int
+  quiz       Quiz     @relation(fields: [quizId], references: [id])
+  options    Option[]
+  type       String   @default("SINGLE_CHOICE") // SINGLE_CHOICE or MULTIPLE_CHOICE
+}
+
+model Option {
+  id         Int      @id @default(autoincrement())
+  text       String
+  isCorrect  Boolean
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+}
+
+model UserQuizSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  quizId    Int
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  quizRunId Int?
+  quizRun   QuizRun? @relation(fields: [quizRunId], references: [id], onDelete: SetNull)
+  score     Int
+  joinedAt  DateTime @default(now())
+}
+
+
